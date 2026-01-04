@@ -5,21 +5,21 @@
 # Defaults
 if (! ${?PGHOST}) setenv PGHOST localhost
 if (! ${?PGPORT}) setenv PGPORT 5432
-if (! ${?PGUSER}) setenv PGUSER mz
+if (! ${?PGUSER}) setenv PGUSER postgres
 if (! ${?PGDATABASE}) setenv PGDATABASE db_mz
-if (! ${?BACKUP_DIR}) setenv BACKUP_DIR /var/db/postgres
-if (! ${?RETENTION_DAYS}) setenv RETENTION_DAYS 7
+if (! ${?BACKUP_DIR}) setenv BACKUP_DIR /var/db/postgres/backups
+if (! ${?RETENTION_DAYS}) setenv RETENTION_DAYS 30
 
-set TS = `date -u +%Y-%m-%dT%H%M%SZ`
+set TS = `date -u +%Y-%m-%d%H%M%S`
 
 # Simple logger
-alias log 'echo `date -u +%Y-%m-%dT%H:%M:%SZ` \!*'
+alias log 'echo `date -u +%Y-%m-%d %H:%M:%S` \!*'
 
 # require commands
 foreach cmd (psql pg_dump pg_dumpall gzip find mkdir date)
   which ${cmd} >& /dev/null
   if (${status} != 0) then
-    echo "`date -u +%Y-%m-%dT%H:%M:%SZ` required command \"${cmd}\" not found" >&2
+    echo "`date -u +%Y-%m-%d %H:%M:%S` required command \"${cmd}\" not found" >&2
     exit 2
   endif
 end
@@ -35,7 +35,7 @@ pg_dumpall -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} --globals-only | gzip > "${BAC
 if (${status} == 0) then
   log "Saved globals -> ${BACKUP_DIR}/pg_globals_${TS}.sql.gz"
 else
-  echo "`date -u +%Y-%m-%dT%H:%M:%SZ` Failed to dump globals" >&2
+  echo "`date -u +%Y-%m-%d %H:%M:%S` Failed to dump globals" >&2
   exit 1
 endif
 
@@ -65,7 +65,7 @@ endif
 
 # Rotate old backups
 log "Removing backups older than ${RETENTION_DAYS} days"
-find "${BACKUP_DIR}" -type f -mtime +${RETENTION_DAYS} -print -delete || true
+find "${BACKUP_DIR}" -type f -name "*.dump" -mtime +${RETENTION_DAYS} -print -delete || true
 
 log "Backup completed successfully"
 exit 0
